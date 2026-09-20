@@ -31,37 +31,44 @@ export default function ImageDetailsScreen({
   const { image } = route.params;
 
   const handleDownload = async () => {
-    try {
-      const permission =
-        await requestPermissionsAsync();
+  try {
+    const permission =
+      await requestPermissionsAsync();
 
-      if (!permission.granted) {
-        alert('Permission is required to save the image.');
-        return;
-      }
-
-      const destination = new Directory(Paths.cache);
-      const file = await File.downloadFileAsync(
-        image.download_url,
-        destination
-      );
-
-      const asset = await Asset.create(file.uri);
-
-      const album = await Album.get('GalleryApp');
-
-      if (album) {
-        await album.add(asset);
-      } else {
-        await Album.create('GalleryApp', [asset], false);
-      }
-
-      alert('Image downloaded successfully!');
-    } catch (error) {
-      console.error('Download error:', error);
-      alert('Failed to download image.');
+    if (!permission.granted) {
+      alert('Permission is required to save the image.');
+      return;
     }
-  };
+
+    const fileName = `image_${image.id}_${Date.now()}.jpg`;
+    const destination = new File(Paths.cache, fileName);
+
+    const file = await File.downloadFileAsync(
+      image.download_url,
+      destination,
+      { idempotent: true }
+    );
+
+    const asset = await Asset.create(file.uri);
+
+    const album = await Album.get('GalleryApp');
+
+    if (album) {
+      await album.add(asset);
+    } else {
+      await Album.create(
+        'GalleryApp',
+        [asset],
+        false
+      );
+    }
+
+    alert('Image downloaded successfully!');
+  } catch (error) {
+    console.error('Download error:', error);
+    alert('Failed to download image.');
+  }
+};
 
   return (
     <View style={styles.container}>
